@@ -1,24 +1,27 @@
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
 
-// Load native module - tries prebuilds first, falls back to build/Release
+// Load native module - tries local build first, falls back to prebuild
 let nativeKeyring;
 
-// Determine prebuild path based on platform and architecture
-const prebuildDir = path.join(__dirname, 'prebuilds', `${process.platform}-${process.arch}`);
-const prebuildFile = path.join(prebuildDir, 'node-rsa-keys-generator.node');
 const buildFile = path.join(__dirname, 'build', 'Release', 'keys_generator.node');
+const prebuildDir = path.join(__dirname, 'prebuilds', `${process.platform}-${process.arch}`);
+const prebuildFile = path.join(prebuildDir, 'node.napi.node');
 
-if (fs.existsSync(prebuildFile)) {
-    nativeKeyring = require(prebuildFile);
-} else if (fs.existsSync(buildFile)) {
+try {
+    // Try local build first (compiled on user's machine)
     nativeKeyring = require(buildFile);
-} else {
+} catch (buildError) {
+    // Local build failed (missing or GLIBC mismatch) - try prebuild
     try {
-        nativeKeyring = require('node-gyp-build')(__dirname);
-    } catch (e) {
-        throw new Error(`Cannot find native module. Looked in:\n  - ${prebuildFile}\n  - ${buildFile}\nPlatform: ${process.platform}-${process.arch}`);
+        nativeKeyring = require(prebuildFile);
+    } catch (prebuildError) {
+        throw new Error(
+            `Failed to load native module.\n` +
+            `Build error: ${buildError.message}\n` +
+            `Prebuild error: ${prebuildError.message}\n` +
+            `Platform: ${process.platform}-${process.arch}`
+        );
     }
 }
 

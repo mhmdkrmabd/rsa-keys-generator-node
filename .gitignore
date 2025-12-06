@@ -16,6 +16,7 @@ build/
 *.iobj
 *.ipdb
 *.node
+!prebuilds/**/*.node
 
 # Logs
 logs/
